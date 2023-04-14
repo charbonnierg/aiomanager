@@ -27,7 +27,6 @@ from .results import (
     Ok,
     Option,
     OptionError,
-    Panic,
     Result,
     ResultError,
     Some,

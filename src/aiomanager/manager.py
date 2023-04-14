@@ -9,7 +9,7 @@ import anyio.to_process
 import anyio.to_thread
 from anyio.abc import TaskGroup as AnyIOTaskGroup
 
-from .deadline import check_deadline, get_deadline
+from .deadline import create_deadline, deadline_is_expired
 from .func import as_result, as_result_async, final
 from .results import NOTHING, Option, Result, Some
 from .task import Task, TaskStatus
@@ -147,13 +147,17 @@ class TaskManager:
             raise RuntimeError("Task manager is not started yet")
         if self.closed():
             raise RuntimeError("Task manager is closed")
-        deadline_option = get_deadline(deadline=deadline, timeout=timeout)
+        deadline_option = create_deadline(deadline=deadline, timeout=timeout)
         name_option: Option[str] = Some(name) if name else NOTHING
         if catch:
             func = as_result_async(func, catch=catch)
         task = Task[t.Any, t.Any](
             func, manager=self, deadline=deadline_option, name=name_option
         )
+        if deadline_option.is_some_and(deadline_is_expired):
+            self.cancel()
+            task._status = TaskStatus.TIMEOUT
+            return task
         self._anyio_task_group.value.start_soon(task, name=name)
         return task
 
@@ -267,14 +271,14 @@ class TaskManager:
             raise RuntimeError("Task manager is not started yet")
         if self.closed():
             raise RuntimeError("Task manager is closed")
-        deadline_option = get_deadline(deadline=deadline, timeout=timeout)
+        deadline_option = create_deadline(deadline=deadline, timeout=timeout)
         name_option: Option[str] = Some(name) if name else NOTHING
         if catch:
             func = as_result_async(func, catch=catch)
         task = Task[t.Any, t.Any](
             func, manager=self, deadline=deadline_option, name=name_option
         )
-        if check_deadline(deadline_option).err():
+        if deadline_option.is_some_and(deadline_is_expired):
             self.cancel()
             task._status = TaskStatus.TIMEOUT
             return task

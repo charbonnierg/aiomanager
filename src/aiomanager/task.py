@@ -2,14 +2,13 @@ from __future__ import annotations
 
 import typing as t
 from enum import Enum
-from time import time
 from types import TracebackType
 
 import anyio
 from anyio.abc import TaskGroup as AnyIOTaskGroup
 from anyio.abc import TaskStatus as AnyIOTaskStatus
 
-from aiomanager.deadline import check_deadline
+from aiomanager.deadline import deadline_is_expired, deadline_to_timeout
 
 from .results import NOTHING, Option, Result, Some
 
@@ -181,8 +180,13 @@ class Task(t.Generic[T, E]):
     async def __task__(
         self, task_status: AnyIOTaskStatus = anyio.TASK_STATUS_IGNORED
     ) -> None:
+        if self.deadline.is_some_and(deadline_is_expired):
+            task_status.started()
+            self._status = TaskStatus.TIMEOUT
+            self._parent_task_manager.inspect(lambda manager: manager.cancel())
+            return
         with anyio.move_on_after(
-            delay=self.deadline.unwrap_or(float("inf")) - time()
+            delay=self.deadline.map_or(float("inf"), deadline_to_timeout)
         ) as cancel_scope:
             task_status.started()
             try:
@@ -195,7 +199,7 @@ class Task(t.Generic[T, E]):
                     self._status = TaskStatus.FAILURE
             # Raise back cancelled errors
             except anyio.get_cancelled_exc_class():
-                if check_deadline(self.deadline).err():
+                if self.deadline.is_some_and(deadline_is_expired):
                     self._status = TaskStatus.TIMEOUT
                 else:
                     self._status = TaskStatus.CANCELLED

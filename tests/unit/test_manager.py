@@ -48,17 +48,17 @@ class TestTask:
         assert task.done() is False
         assert task.cancelled() is False
         # Assert result and exception raise an error
-        task.result().expect_empty(
-            "Task result should be empty when task is not created"
+        task.result().expect_nothing(
+            "Task result should be Nothing() when task is not created"
         )
-        task.ok().expect_empty(
-            "Task ok result should be empty when task is not created"
+        task.ok().expect_nothing(
+            "Task ok result should be Nothing() when task is not created"
         )
-        task.err().expect_empty(
-            "Task err result should be empty when task is not created"
+        task.err().expect_nothing(
+            "Task err result should be Nothing() when task is not created"
         )
-        task.exception().expect_empty(
-            "Task exception should be empty when task is not created"
+        task.exception().expect_nothing(
+            "Task exception should be Nothing() when task is not created"
         )
         with pytest.raises(RuntimeError, match="Task is not started"):
             await task.join()
@@ -77,17 +77,17 @@ class TestTask:
             assert task.done() is False
             assert task.cancelled() is False
             # Assert result and exception raise an error
-            task.result().expect_empty(
-                "Task result should be empty when task is not created"
+            task.result().expect_nothing(
+                "Task result should be Nothing() when task is not created"
             )
-            task.ok().expect_empty(
-                "Task ok result should be empty when task is not created"
+            task.ok().expect_nothing(
+                "Task ok result should be Nothing() when task is not created"
             )
-            task.err().expect_empty(
-                "Task err result should be empty when task is not created"
+            task.err().expect_nothing(
+                "Task err result should be Nothing() when task is not created"
             )
-            task.exception().expect_empty(
-                "Task exception should be empty when task is not created"
+            task.exception().expect_nothing(
+                "Task exception should be Nothing() when task is not created"
             )
 
     async def test_task_state_success(self) -> None:
@@ -101,11 +101,11 @@ class TestTask:
             assert task.cancelled() is False
             assert task.unwrap_result() == Ok(0)
             assert task.unwrap_ok() == 0
-            task.err().expect_empty(
-                "Task error should be empty when task completed successfully"
+            task.err().expect_nothing(
+                "Task error should be Nothing() when task completed successfully"
             )
-            task.exception().expect_empty(
-                "Task exception should be empty when task completed successfully"
+            task.exception().expect_nothing(
+                "Task exception should be Nothing() when task completed successfully"
             )
 
     async def test_task_state_failure(self) -> None:
@@ -120,14 +120,14 @@ class TestTask:
         assert task.status == TaskStatus.FAILURE
         assert task.done() is True
         assert task.cancelled() is False
-        task.exception().expect_empty(
-            "Task exception should be empty when task returns an Err result."
+        task.exception().expect_nothing(
+            "Task exception should be Nothing() when task returns an Err result."
         )
         task.result().expect(
             "Task result should be set when task returns an Err result"
         )
-        task.ok().expect_empty(
-            "Task ok result should be empty when task returns an Err result"
+        task.ok().expect_nothing(
+            "Task ok result should be Nothing() when task returns an Err result"
         )
         assert task.err().contains(err)
 
@@ -141,15 +141,17 @@ class TestTask:
         assert task.cancelled()
         assert task.done()
         # Assert result and exception raise an error
-        task.result().expect_empty(
-            "Task result option should be empty when task is cancelled."
+        task.result().expect_nothing(
+            "Task result option should be Nothing() when task is cancelled."
         )
-        task.ok().expect_empty("Task ok result should be empty when task is cancelled.")
-        task.err().expect_empty(
-            "Task err result should be empty when task is cancelled."
+        task.ok().expect_nothing(
+            "Task ok result should be Nothing() when task is cancelled."
         )
-        task.exception().expect_empty(
-            "Task exception option should be empty when task is cancelled."
+        task.err().expect_nothing(
+            "Task err result should be Nothing() when task is cancelled."
+        )
+        task.exception().expect_nothing(
+            "Task exception option should be Nothing() when task is cancelled."
         )
 
     async def test_task_state_cancelled_after_start(self) -> None:
@@ -163,15 +165,17 @@ class TestTask:
         assert task.cancelled()
         assert task.done()
         # Assert result and exception raise an error
-        task.result().expect_empty(
-            "Task result option should be empty when task is cancelled."
+        task.result().expect_nothing(
+            "Task result option should be Nothing() when task is cancelled."
         )
-        task.ok().expect_empty("Task ok result should be empty when task is cancelled.")
-        task.err().expect_empty(
-            "Task err result should be empty when task is cancelled."
+        task.ok().expect_nothing(
+            "Task ok result should be Nothing() when task is cancelled."
         )
-        task.exception().expect_empty(
-            "Task exception option should be empty when task is cancelled."
+        task.err().expect_nothing(
+            "Task err result should be Nothing() when task is cancelled."
+        )
+        task.exception().expect_nothing(
+            "Task exception option should be Nothing() when task is cancelled."
         )
 
     async def test_task_state_timeout_after_start(self) -> None:
@@ -184,15 +188,17 @@ class TestTask:
         assert task.cancelled()
         assert task.done()
         # Assert result and exception raise an error
-        task.result().expect_empty(
-            "Task result option should be empty when task is cancelled."
+        task.result().expect_nothing(
+            "Task result option should be Nothing() when task is cancelled."
         )
-        task.ok().expect_empty("Task ok result should be empty when task is cancelled.")
-        task.err().expect_empty(
-            "Task err result should be empty when task is cancelled."
+        task.ok().expect_nothing(
+            "Task ok result should be Nothing() when task is cancelled."
         )
-        task.exception().expect_empty(
-            "Task exception option should be empty when task is cancelled."
+        task.err().expect_nothing(
+            "Task err result should be Nothing() when task is cancelled."
+        )
+        task.exception().expect_nothing(
+            "Task exception option should be Nothing() when task is cancelled."
         )
 
     async def test_task_can_be_cancelled_many_times(

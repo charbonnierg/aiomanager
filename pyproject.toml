@@ -30,6 +30,7 @@ dev = [
     "pytest-asyncio",
     "pytest-cov",
     "types-setuptools",
+    "trio",
 ]
 docs = [
     "mkdocs-gen-files",

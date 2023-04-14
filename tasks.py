@@ -180,7 +180,7 @@ def docker(
         build_args["BASE_IMAGE"] = base_image
     if build_image:
         build_args["BUILD_IMAGE"] = build_image
-    # Create an empty pip config if user does not have a pip config yet
+    # Create an Nothing() pip config if user does not have a pip config yet
     # Use strict permissions since pip config can hold tokens
     pip_configfile = Path(pip_config).expanduser()
     if not pip_configfile.exists():

@@ -69,7 +69,7 @@ class OptionABC(t.Generic[T], metaclass=abc.ABCMeta):
         """Returns true if the option is a `Some` value."""
 
     @abc.abstractmethod
-    def is_empty(self) -> t.Literal[True, False]:
+    def is_nothing(self) -> t.Literal[True, False]:
         """Returns true if the option is `Nothing`."""
 
     @abc.abstractmethod
@@ -77,7 +77,7 @@ class OptionABC(t.Generic[T], metaclass=abc.ABCMeta):
         """Returns the contained `Some` value or raise an error with message provided by `msg` argument."""
 
     @abc.abstractmethod
-    def expect_empty(self, msg: str) -> None:
+    def expect_nothing(self, msg: str) -> None:
         """Returns None if the option is `Nothing` or raise an error with message provided by `msg` argument."""
 
     @abc.abstractmethod
@@ -235,16 +235,16 @@ class ResultABC(t.Generic[T, E], metaclass=abc.ABCMeta):
         """Maps a `Result[T, E]` to `Result[U, E]` by applying a function to a contained `Ok` value, leaving an `Err` value untouched."""
 
     @abc.abstractmethod
+    def map_err(self, func: t.Callable[[E], F]) -> Result[T, F]:
+        """Maps a Result[T, E] to Result[T, F] by applying a function to a contained Err value, leaving an Ok value untouched."""
+
+    @abc.abstractmethod
     def map_or(self, default: U, func: t.Callable[[T], U]) -> U:
         """Returns the provided default (if Err), or applies a function to the contained value (if Ok)."""
 
     @abc.abstractmethod
     def map_or_else(self, default: t.Callable[[], U], func: t.Callable[[T], U]) -> U:
         """Maps a Result[T, E] to U by applying fallback function default to a contained Err value, or function f to a contained Ok value."""
-
-    @abc.abstractmethod
-    def map_err(self, func: t.Callable[[E], F]) -> Result[T, F]:
-        """Maps a Result[T, E] to Result[T, F] by applying a function to a contained Err value, leaving an Ok value untouched."""
 
     @abc.abstractmethod
     def inspect(self, func: t.Callable[[T], t.Any]) -> Result[T, E]:
@@ -259,16 +259,24 @@ class ResultABC(t.Generic[T, E], metaclass=abc.ABCMeta):
         """Returns the contained Ok value if Ok else raises an error with provided message."""
 
     @abc.abstractmethod
-    def unwrap(self) -> T:
-        """Returns the contained Ok value if Ok else raises an error."""
-
-    @abc.abstractmethod
     def expect_err(self, msg: str) -> E:
         """Returns the contained Err value if result is Err else raise an error with provided message."""
 
     @abc.abstractmethod
+    def unwrap(self) -> T:
+        """Returns the contained Ok value if Ok else raises an error."""
+
+    @abc.abstractmethod
     def unwrap_err(self) -> E:
         """Returns the contained Err value if Err else raises an error."""
+
+    @abc.abstractmethod
+    def unwrap_or(self, default: T) -> T:
+        """Returns the contained Ok value or a provided default."""
+
+    @abc.abstractmethod
+    def unwrap_or_else(self, default: t.Callable[[E], T]) -> T:
+        """Returns the contained Ok value or computes it from a closure."""
 
     @abc.abstractmethod
     def and_result(self, other: Result[U, E]) -> Result[U, E]:
@@ -285,14 +293,6 @@ class ResultABC(t.Generic[T, E], metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def or_else(self, func: t.Callable[[E], Result[T, F]]) -> Result[T, F]:
         """Calls func if the result is Err, otherwise forward Ok."""
-
-    @abc.abstractmethod
-    def unwrap_or(self, default: T) -> T:
-        """Returns the contained Ok value or a provided default."""
-
-    @abc.abstractmethod
-    def unwrap_or_else(self, default: t.Callable[[E], T]) -> T:
-        """Returns the contained Ok value or computes it from a closure."""
 
     @abc.abstractmethod
     def contains(self, value: t.Any) -> bool:
@@ -313,7 +313,7 @@ class Some(OptionABC[T]):
     __match_args__ = ("value",)
 
     @t.overload
-    def __init__(self: Some[t.Literal[True]]) -> None:
+    def __init__(self: Some[bool]) -> None:
         ...  # pragma: no cover
 
     @t.overload
@@ -359,13 +359,13 @@ class Some(OptionABC[T]):
     def is_some_and(self, predicate: t.Callable[[T], bool]) -> bool:
         return predicate(self._value)
 
-    def is_empty(self) -> t.Literal[False]:
+    def is_nothing(self) -> t.Literal[False]:
         return False
 
     def expect(self, msg: str) -> T:
         return self._value
 
-    def expect_empty(self, msg: str) -> t.NoReturn:
+    def expect_nothing(self, msg: str) -> t.NoReturn:
         raise IsNotNothingError(self, msg)
 
     def unwrap(self) -> T:
@@ -466,13 +466,13 @@ class Nothing(OptionABC[t.NoReturn], metaclass=SingletonABC):
     def is_some_and(self, predicate: t.Callable[[t.Any], bool]) -> t.Literal[False]:
         return False
 
-    def is_empty(self) -> t.Literal[True]:
+    def is_nothing(self) -> t.Literal[True]:
         return True
 
     def expect(self, msg: str) -> t.NoReturn:
         raise IsNothingError(msg)
 
-    def expect_empty(self, msg: str) -> None:
+    def expect_nothing(self, msg: str) -> None:
         return None
 
     def unwrap(self) -> t.NoReturn:
@@ -577,6 +577,7 @@ class Ok(ResultABC[T, t.NoReturn]):
     def __next__(self) -> T:
         if self._visited:
             raise StopIteration
+        self._visited = True
         return self._value
 
     def is_ok(self) -> t.Literal[True]:
@@ -673,10 +674,10 @@ class Err(ResultABC[t.NoReturn, E]):
         ...  # pragma: no cover
 
     @t.overload
-    def __init__(self: Err[t.Literal[False]]) -> None:
+    def __init__(self: Err[bool]) -> None:
         ...  # pragma: no cover
 
-    def __init__(self, value: t.Any = True) -> None:
+    def __init__(self, value: t.Any = False) -> None:
         self._value = value
 
     @property
@@ -753,6 +754,12 @@ class Err(ResultABC[t.NoReturn, E]):
     def unwrap_err(self) -> E:
         return self._value
 
+    def unwrap_or(self, default: T) -> T:
+        return default
+
+    def unwrap_or_else(self, default: t.Callable[[E], T]) -> T:
+        return default(self._value)
+
     def and_result(self, other: object) -> Err[E]:
         return self
 
@@ -765,21 +772,11 @@ class Err(ResultABC[t.NoReturn, E]):
     def or_else(self, func: t.Callable[[E], Result[T, F]]) -> Result[T, F]:
         return func(self._value)
 
-    def unwrap_or(self, default: T) -> T:
-        return default
-
-    def unwrap_or_else(self, default: t.Callable[[E], T]) -> T:
-        return default(self._value)
-
     def contains(self, value: object) -> t.Literal[False]:
         return False
 
     def contains_err(self, value: object) -> bool:
         return self._value == value
-
-
-class Panic(Err[BaseException]):
-    """An error created from a raised exception."""
 
 
 # define Result as a generic type alias for use
